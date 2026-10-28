@@ -1,0 +1,10 @@
+# Secrets and dependencies
+backend/.env
+backend/.env.*
+!backend/.env.example
+**/node_modules/
+npm-debug.log*
+.DS_Store
+.vscode/
+coverage/
+*.log

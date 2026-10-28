@@ -1,0 +1,28 @@
+require('dotenv').config();
+const path=require('path');
+const express=require('express');
+const helmet=require('helmet');
+const rateLimit=require('express-rate-limit');
+const supabase=require('./supabase');
+const entriesRouter=require('./routes/entries');
+const summaryRouter=require('./routes/summary');
+const settingsRouter=require('./routes/settings');
+const {notFound,errorHandler}=require('./middleware/errors');
+const app=express();
+app.disable('x-powered-by');
+app.use(helmet({contentSecurityPolicy:{directives:{defaultSrc:["'self'"],scriptSrc:["'self'"],styleSrc:["'self'","'unsafe-inline'","https://fonts.googleapis.com"],fontSrc:["'self'","https://fonts.gstatic.com"],imgSrc:["'self'","data:"]}}}));
+app.use(express.json({limit:'20kb'}));
+app.use('/api',rateLimit({windowMs:15*60*1000,limit:300,standardHeaders:'draft-8',legacyHeaders:false,message:{error:'Too many requests. Please wait a little and try again.'}}));
+app.get('/api/health',async(req,res)=>{
+  const {error}=await supabase.from('app_settings').select('id').eq('id',1).maybeSingle();
+  if(error)return res.status(503).json({status:'error',message:'Database connection or schema check failed.'});
+  res.json({status:'ok',database:'connected'});
+});
+app.use('/api/entries',entriesRouter);
+app.use('/api/summary',summaryRouter);
+app.use('/api/settings',settingsRouter);
+app.use(express.static(path.join(__dirname,'..','frontend'),{index:'index.html'}));
+app.use('/api',notFound);
+app.use(errorHandler);
+const port=Number(process.env.PORT)||3000;
+app.listen(port,()=>console.log(`WaterWise running at http://localhost:${port}`));
